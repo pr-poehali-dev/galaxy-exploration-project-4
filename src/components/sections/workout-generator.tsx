@@ -47,11 +47,13 @@ export function WorkoutGenerator() {
       const data = await res.json()
       if (data.workout) {
         setWorkout(data.workout)
+      } else if (data.error) {
+        setError(`Ошибка: ${data.error}`)
       } else {
         setError("Не удалось сгенерировать тренировку. Попробуйте ещё раз.")
       }
-    } catch {
-      setError("Ошибка соединения. Попробуйте ещё раз.")
+    } catch (e) {
+      setError(`Ошибка соединения: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
       setLoading(false)
     }

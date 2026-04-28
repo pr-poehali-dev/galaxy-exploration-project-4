@@ -62,7 +62,7 @@ def handler(event: dict, context) -> dict:
 Упражнения должны быть связаны с боевой подготовкой: строевые, силовые, скоростные, координационные."""
 
     payload = json.dumps({
-        'model': 'gpt-4',
+        'model': 'gpt-4o-mini',
         'messages': [{'role': 'user', 'content': prompt}],
         'temperature': 0.7,
         'max_tokens': 1500,
@@ -77,11 +77,18 @@ def handler(event: dict, context) -> dict:
         }
     )
 
-    with urllib.request.urlopen(req, timeout=25) as resp:
-        result = json.loads(resp.read().decode('utf-8'))
+    try:
+        with urllib.request.urlopen(req, timeout=25) as resp:
+            result = json.loads(resp.read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode('utf-8')
+        return {
+            'statusCode': 502,
+            'headers': {'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'OpenAI error {e.code}: {error_body}'}, ensure_ascii=False)
+        }
 
     content = result['choices'][0]['message']['content'].strip()
-    # Извлекаем JSON из ответа
     start = content.find('{')
     end = content.rfind('}') + 1
     workout_json = json.loads(content[start:end])

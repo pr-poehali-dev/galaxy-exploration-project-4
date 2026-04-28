@@ -5,7 +5,7 @@ import urllib.error
 
 
 def handler(event: dict, context) -> dict:
-    """Генерирует персональный план тренировки боевой подготовки через DeepSeek AI на основе параметров пользователя."""
+    """Генерирует персональный план тренировки боевой подготовки через YandexGPT на основе параметров пользователя."""
 
     if event.get('httpMethod') == 'OPTIONS':
         return {
@@ -32,13 +32,14 @@ def handler(event: dict, context) -> dict:
             'body': {'error': 'Укажите возраст, уровень подготовки и цель'}
         }
 
-    api_key = os.environ.get('DEEPSEEK_API_KEY', '')
+    api_key = os.environ.get('YANDEX_API_KEY', '')
+    folder_id = os.environ.get('YANDEX_FOLDER_ID', '')
 
-    if not api_key:
+    if not api_key or not folder_id:
         return {
             'statusCode': 500,
             'headers': {'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'DEEPSEEK_API_KEY не настроен'}, ensure_ascii=False)
+            'body': json.dumps({'error': 'YANDEX_API_KEY или YANDEX_FOLDER_ID не настроены'}, ensure_ascii=False)
         }
 
     prompt = f"""Ты тренер по боевой подготовке. Составь персональный план мини-тренировки.
@@ -49,7 +50,7 @@ def handler(event: dict, context) -> dict:
 - Уровень подготовки: {level}
 - Цель: {goal}
 
-Составь план тренировки на 20-45 минут. Формат ответа — строго JSON без каких-либо пояснений:
+Составь план тренировки на 20-45 минут. Ответь ТОЛЬКО валидным JSON без каких-либо пояснений, без markdown:
 {{
   "title": "Название тренировки",
   "duration": "XX минут",
@@ -69,18 +70,22 @@ def handler(event: dict, context) -> dict:
 Упражнения должны быть связаны с боевой подготовкой: силовые, скоростные, координационные, выносливость."""
 
     payload = json.dumps({
-        'model': 'deepseek-chat',
-        'messages': [{'role': 'user', 'content': prompt}],
-        'temperature': 0.7,
-        'max_tokens': 1500,
-        'response_format': {'type': 'json_object'},
+        'modelUri': f'gpt://{folder_id}/yandexgpt/latest',
+        'completionOptions': {
+            'stream': False,
+            'temperature': 0.7,
+            'maxTokens': 2000,
+        },
+        'messages': [
+            {'role': 'user', 'text': prompt}
+        ]
     }).encode('utf-8')
 
     req = urllib.request.Request(
-        'https://api.deepseek.com/chat/completions',
+        'https://llm.api.cloud.yandex.net/foundationModels/v1/completion',
         data=payload,
         headers={
-            'Authorization': f'Bearer {api_key}',
+            'Authorization': f'Api-Key {api_key}',
             'Content-Type': 'application/json',
         }
     )
@@ -93,10 +98,10 @@ def handler(event: dict, context) -> dict:
         return {
             'statusCode': 502,
             'headers': {'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': f'DeepSeek error {e.code}: {error_body}'}, ensure_ascii=False)
+            'body': json.dumps({'error': f'YandexGPT error {e.code}: {error_body}'}, ensure_ascii=False)
         }
 
-    content = result['choices'][0]['message']['content'].strip()
+    content = result['result']['alternatives'][0]['message']['text'].strip()
     start = content.find('{')
     end = content.rfind('}') + 1
     workout_json = json.loads(content[start:end])

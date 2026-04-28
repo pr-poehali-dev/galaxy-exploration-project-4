@@ -2,7 +2,7 @@ import { useState } from "react"
 import { MagneticButton } from "@/components/magnetic-button"
 import { useReveal } from "@/hooks/use-reveal"
 import Icon from "@/components/ui/icon"
-import func2url from "../../backend/func2url.json"
+const GENERATE_WORKOUT_URL = "https://functions.poehali.dev/0b5ef737-8457-4096-a6ef-683efbac0e34"
 
 interface WorkoutExercise {
   name: string
@@ -39,7 +39,7 @@ export function WorkoutGenerator() {
     setWorkout(null)
 
     try {
-      const res = await fetch(func2url["generate-workout"], {
+      const res = await fetch(GENERATE_WORKOUT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

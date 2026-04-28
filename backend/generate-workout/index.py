@@ -33,6 +33,14 @@ def handler(event: dict, context) -> dict:
         }
 
     api_key = os.environ.get('OPENAI_API_KEY', '')
+    print(f"[DEBUG] api_key present: {bool(api_key)}, length: {len(api_key)}")
+
+    if not api_key:
+        return {
+            'statusCode': 500,
+            'headers': {'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'OPENAI_API_KEY не настроен'}, ensure_ascii=False)
+        }
 
     prompt = f"""Ты тренер по боевой подготовке. Составь персональный план мини-тренировки.
 

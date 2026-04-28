@@ -5,7 +5,7 @@ import urllib.error
 
 
 def handler(event: dict, context) -> dict:
-    """Генерирует персональный план тренировки боевой подготовки через GPT-4 на основе параметров пользователя."""
+    """Генерирует персональный план тренировки боевой подготовки через DeepSeek AI на основе параметров пользователя."""
 
     if event.get('httpMethod') == 'OPTIONS':
         return {
@@ -32,14 +32,13 @@ def handler(event: dict, context) -> dict:
             'body': {'error': 'Укажите возраст, уровень подготовки и цель'}
         }
 
-    api_key = os.environ.get('OPENAI_API_KEY', '')
-    print(f"[DEBUG] api_key present: {bool(api_key)}, length: {len(api_key)}")
+    api_key = os.environ.get('DEEPSEEK_API_KEY', '')
 
     if not api_key:
         return {
             'statusCode': 500,
             'headers': {'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'OPENAI_API_KEY не настроен'}, ensure_ascii=False)
+            'body': json.dumps({'error': 'DEEPSEEK_API_KEY не настроен'}, ensure_ascii=False)
         }
 
     prompt = f"""Ты тренер по боевой подготовке. Составь персональный план мини-тренировки.
@@ -50,7 +49,7 @@ def handler(event: dict, context) -> dict:
 - Уровень подготовки: {level}
 - Цель: {goal}
 
-Составь план тренировки на 20-45 минут. Формат ответа — строго JSON:
+Составь план тренировки на 20-45 минут. Формат ответа — строго JSON без каких-либо пояснений:
 {{
   "title": "Название тренировки",
   "duration": "XX минут",
@@ -67,17 +66,18 @@ def handler(event: dict, context) -> dict:
   "tips": ["Совет 1", "Совет 2", "Совет 3"]
 }}
 
-Упражнения должны быть связаны с боевой подготовкой: строевые, силовые, скоростные, координационные."""
+Упражнения должны быть связаны с боевой подготовкой: силовые, скоростные, координационные, выносливость."""
 
     payload = json.dumps({
-        'model': 'gpt-4o-mini',
+        'model': 'deepseek-chat',
         'messages': [{'role': 'user', 'content': prompt}],
         'temperature': 0.7,
         'max_tokens': 1500,
+        'response_format': {'type': 'json_object'},
     }).encode('utf-8')
 
     req = urllib.request.Request(
-        'https://api.openai.com/v1/chat/completions',
+        'https://api.deepseek.com/chat/completions',
         data=payload,
         headers={
             'Authorization': f'Bearer {api_key}',
@@ -93,7 +93,7 @@ def handler(event: dict, context) -> dict:
         return {
             'statusCode': 502,
             'headers': {'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': f'OpenAI error {e.code}: {error_body}'}, ensure_ascii=False)
+            'body': json.dumps({'error': f'DeepSeek error {e.code}: {error_body}'}, ensure_ascii=False)
         }
 
     content = result['choices'][0]['message']['content'].strip()
